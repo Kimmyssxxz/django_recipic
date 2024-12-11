@@ -1,0 +1,5 @@
+env/
+DjangoTrainProject/core/ml_model/Filipino_Food_ResNet50_Final.h5
+DjangoTrainProject/core/ml_model/data_colection
+DjangoTrainProject/core/ml_model/management
+DjangoTrainProject/core/ml_model/trained_data

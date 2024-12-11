@@ -1,0 +1,298 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filipino Food Classifier</title>
+    <link rel="icon" type="image/png" href="{% static 'img/recipiclogo.svg' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#FFA500',
+                        'secondary': '#4CAF50',
+                    },
+                    fontFamily: {
+                        'poppins': ['Poppins', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: white;
+        }
+        .header {
+            background-color: #FFA500;
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 3rem auto;
+            aspect-ratio: 4/3;
+        }
+        .viewfinder-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 8px solid black;
+            z-index: 10;
+        }
+        .top-left { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .top-right { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .bottom-left { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .bottom-right { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+        .detected-food {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: black;
+            color: white;
+            padding: 0.5rem 2rem;
+            border-radius: 0 0 0.5rem 0.5rem;
+            font-weight: bold;
+            z-index: 20;
+        }
+        @keyframes scanning {
+            0%, 100% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.5; }
+        }
+        .scanning-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: white;
+            box-shadow: 0 0 10px white, 0 0 20px white;
+            opacity: 0;
+            z-index: 15;
+        }
+        .scanning .scanning-line {
+            animation: scanning 2s linear infinite;
+        }
+        @keyframes error-blink {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+        }
+        .error-blink {
+            animation: error-blink 0.5s ease-in-out 3;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        #recipeModal {
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex flex-col">
+    <div class="header">
+        <h1 class="text-4xl font-bold text-white text-center">Filipino Food Classifier</h1>
+    </div>
+
+    <main class="container mx-auto px-4 flex-grow">
+        <div class="camera-container">
+            <div class="detected-food" id="detectedFood">Detected Food</div>
+            <div class="viewfinder-corner top-left"></div>
+            <div class="viewfinder-corner top-right"></div>
+            <div class="viewfinder-corner bottom-left"></div>
+            <div class="viewfinder-corner bottom-right"></div>
+            <div class="scanning-line"></div>
+            <video id="video" autoplay></video>
+            <canvas id="canvas" class="hidden"></canvas>
+        </div>
+
+        <div class="flex flex-col items-center gap-6 mt-4">
+            <button id="capture" class="w-12 h-12 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+            
+            <button id="captureOther" class="px-6 py-2 bg-secondary text-white font-medium rounded hover:bg-opacity-90 transition-colors">
+                Capture Other Recipe
+            </button>
+
+            <div id="confidence" class="text-xl font-medium">
+                Confidence:
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-auto">
+        <a href="{% url 'login' %}" class="float-right mr-4 mb-4 px-4 py-2 text-black font-medium rounded hover:bg-opacity-90 transition-colors">
+            Logout
+        </a>
+    </footer>
+
+    <div id="recipeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl overflow-hidden w-11/12 max-w-4xl shadow-2xl flex flex-col md:flex-row">
+            <!-- Left Panel - Dark section with ingredients -->
+            <div class="bg-gradient-to-br from-primary to-secondary w-full md:w-2/5 p-8 text-white">
+                <h2 id="recipeTitle" class="text-3xl font-bold mb-6"></h2>
+                <h3 class="text-2xl font-semibold mb-4">Ingredients:</h3>
+                <ul id="recipeIngredients" class="list-disc list-inside space-y-2 text-white/90">
+                </ul>
+                <p id="recipeDescription" class="text-white/90 italic"></p>
+            </div>
+            
+            <!-- Right Panel - White section with cooking time and instructions -->
+            <div class="bg-white w-full md:w-3/5 p-8 relative">
+                <!-- Close Button -->
+                <button id="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div id="recipe" class="space-y-6">
+                    <div class="border-b pb-4">
+                        <p id="recipeCookingTime" class="text-primary font-medium"></p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-xl font-semibold mb-4">Instructions:</h4>
+                        <ol id="recipeInstructions" class="list-decimal list-inside space-y-4 text-gray-700">
+                        </ol>
+                    </div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const captureButton = document.getElementById('capture');
+            const captureOtherButton = document.getElementById('captureOther');
+            const confidenceElement = document.getElementById('confidence');
+            const recipeModal = document.getElementById('recipeModal');
+            const recipeElement = document.getElementById('recipe');
+            const recipeTitleElement = document.getElementById('recipeTitle');
+            const recipeDescriptionElement = document.getElementById('recipeDescription');
+            const recipeCookingTimeElement = document.getElementById('recipeCookingTime');
+            const recipeInstructionsElement = document.getElementById('recipeInstructions');
+            const closeModalButton = document.getElementById('closeModal');
+            const cameraContainer = document.querySelector('.camera-container');
+            const detectedFoodElement = document.getElementById('detectedFood');
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Error accessing the camera", err);
+                });
+
+            function startScanning() {
+                cameraContainer.classList.add('scanning');
+                setTimeout(() => {
+                    cameraContainer.classList.remove('scanning');
+                }, 2000);
+            }
+
+            function typeWriter(element, text, i = 0) {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(() => typeWriter(element, text, i), 50);
+                }
+            }
+
+            function animateRecipe(recipe) {
+                recipeModal.classList.remove('hidden');
+                recipeTitleElement.textContent = recipe.title;
+                recipeDescriptionElement.textContent = recipe.description;
+                recipeCookingTimeElement.textContent = `Cooking Time: ${recipe.cooking_time} minutes`;
+                
+                // Clear and populate instructions
+                recipeInstructionsElement.innerHTML = '';
+                recipe.instructions.forEach((instruction, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = instruction;
+                    li.className = 'leading-relaxed';
+                    recipeInstructionsElement.appendChild(li);
+                });
+
+                // Add ingredients list population
+                const ingredientsElement = document.getElementById('recipeIngredients');
+                ingredientsElement.innerHTML = '';
+                if (recipe.ingredients) {
+                    recipe.ingredients.forEach(ingredient => {
+                        const li = document.createElement('li');
+                        li.textContent = ingredient;
+                        li.className = 'leading-relaxed';
+                        ingredientsElement.appendChild(li);
+                    });
+                }
+            }
+
+            captureButton.addEventListener('click', function() {
+                startScanning();
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+
+                canvas.toBlob(function(blob) {
+                    const formData = new FormData();
+                    formData.append('image', blob, 'captured_image.jpg');
+
+                    axios.post('/api/classify/', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    })
+                    .then(response => {
+                        detectedFoodElement.textContent = response.data.class_name;
+                        confidenceElement.textContent = `Confidence: ${response.data.confidence}`;
+                        if (response.data.recipe) {
+                            animateRecipe(response.data.recipe);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        detectedFoodElement.textContent = 'Try again!';
+                        confidenceElement.textContent = '';
+                        cameraContainer.classList.add('error-blink');
+                        setTimeout(() => {
+                            cameraContainer.classList.remove('error-blink');
+                        }, 1500);
+                    });
+                }, 'image/jpeg');
+            });
+
+            captureOtherButton.addEventListener('click', function() {
+                location.reload();
+            });
+
+            closeModalButton.addEventListener('click', function() {
+                recipeModal.classList.add('hidden');
+            });
+
+            recipeModal.addEventListener('click', function(e) {
+                if (e.target === recipeModal) {
+                    recipeModal.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

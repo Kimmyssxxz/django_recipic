@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" type="image/png" href="{% static 'img/recipiclogo.svg' %}">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <!-- Header with Logout -->
+    <div class="absolute top-4 right-4">
+        <a href="{% url 'login' %}" class="text-gray-600 hover:text-gray-800 text-sm">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Logo and Title Section -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 mx-auto mb-4  flex items-center justify-center">
+                <img class="h-12 w-auto" src="/static/img/recipiclogo.svg" alt="RECIPIC logo">
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Recipe Management</h1>
+            <a href="{% url 'recipe_create' %}" 
+               class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded transition duration-150 ease-in-out">
+                Add new recipe
+            </a>
+        </div>
+
+        <!-- Recipe Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for recipe in recipes %}
+            <div class="bg-white border rounded overflow-hidden transition duration-300 ease-in-out">
+                <!-- Updated title section with black background -->
+                <div class="bg-black text-white p-4 mb-4">
+                    <h2 class="text-xl font-bold">{{ recipe.title }}</h2>
+                </div>
+                <div class="p-6">
+                    <!-- Recipe Details -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-5 h-5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {{ recipe.cooking_time }} min
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-5 h-5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                {{ recipe.created_at|date:"M d, Y" }}
+                            </span>
+                        </div>
+
+                        <div class="text-gray-600">
+                            <p class="mb-4">{{ recipe.description|truncatewords:20 }}</p>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div>
+                            <h3 class="font-medium text-gray-900 mb-2">Instructions:</h3>
+                            <ol class="list-decimal list-inside text-gray-600">
+                                {% for instruction in recipe.instructions.all %}
+                                <li class="mb-1">{{ instruction.description }}</li>
+                                {% empty %}
+                                <p class="text-gray-500 italic">No instructions available.</p>
+                                {% endfor %}
+                            </ol>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex justify-end space-x-2 pt-4">
+                            <a href="{% url 'recipe_edit' recipe.pk %}" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition duration-150 ease-in-out">
+                                <svg class="mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit
+                            </a>
+                            <a href="{% url 'recipe_delete' recipe.pk %}" class="inline-flex items-center px-3 py-2 text-sm font-medium rounded text-white bg-red-600 hover:bg-red-700 transition duration-150 ease-in-out">
+                                <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full">
+                <p class="text-center text-gray-500 bg-white p-8">No recipes found. Create your first recipe!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Preserve existing smooth scrolling functionality
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Preserve existing fade-in animation for recipe cards
+        const recipeCards = document.querySelectorAll('.bg-white');
+        recipeCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100 * index);
+        });
+    });
+</script>
+{% endblock %}

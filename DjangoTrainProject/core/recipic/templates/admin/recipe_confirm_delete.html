@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="{% static 'img/recipiclogo.svg' %}">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    cream: '#fff8e7',
+                    gold: '#ffa500',
+                },
+                fontFamily: {
+                    sans: ['Poppins', 'sans-serif'],
+                },
+            }
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="bg-cream min-h-screen flex items-center justify-center p-4 font-sans">
+    <div class="max-w-md w-full">
+        <!-- Logo -->
+        <div class="flex justify-center mb-4">
+            <img src="{% static 'img/recipiclogo.svg' %}" alt="Logo" class="w-12 h-12 object-contain">
+        </div>
+
+        <!-- Content Card -->
+        <div class="bg-white border border-gray-200 rounded-lg p-8 text-center">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Delete Recipe</h2>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete the recipe "{{ recipe.title }}"?</p>
+            <form method="post" class="flex justify-center gap-4">
+                {% csrf_token %}
+                <button type="submit" class="text-red-600 hover:text-red-700 font-medium transition-colors">
+                    Confirm
+                </button>
+                <a href="{% url 'admin_dashboard' %}" class="text-green-600 hover:text-green-700 font-medium transition-colors">
+                    Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
